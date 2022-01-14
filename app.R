@@ -42,9 +42,9 @@ ui <- fluidPage(
         selectInput("screen",
                   "screen", c("proliferation", "FACS")),
         selectInput("editor",
-                    "editor", c("BE3_NGG_JAK1_focused", "BE3_NGG_IFNG_pathway", "BE4max_YE1_NGN", "BE3.9max_NGN", "ABE8e_NGN")),
+                    "editor", c("BE3-NGG (JAK1)", "BE3-NGG (IFNG pathway)", "BE4max-YE1-NGN (JAK1)", "BE3.9max-NGN (JAK1)", "ABE8e-NGN (JAK1)")),
         selectInput("labels",
-                    "labels", c("predicted amino acid change", "PTMs", "associated phenotypes")),
+                    "labels", c("predicted amino acid change", "PTMs", "associated phenotypes", "citations")),
         hr(),
         downloadButton("downloadData", "download results"),
         ),
@@ -160,6 +160,19 @@ server <- function(input, output) {
         ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
         } 
         
+        else if(input$screen == "proliferation" & input$labels == "citations")
+        {plot_ly(data, 
+                 x=~Amino_Acid_Position_simple, 
+                 y=~zscore_proliferation,
+                 color=~Consequence,
+                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 size = 2,
+                 alpha = 0.8,
+                 hoverinfo="text", 
+                 text = ~paste(Amino_Acid_Position, Citation)
+        ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
+        } 
+        
         else if(input$screen == "FACS" & input$labels == "predicted amino acid change")
         {plot_ly(data, 
                  x=~Amino_Acid_Position_simple, 
@@ -196,6 +209,19 @@ server <- function(input, output) {
                  alpha = 0.8,
                  hoverinfo="text", 
                  text = ~paste(Amino_Acid_Position, PTM)
+        ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
+        } 
+        
+        else if(input$screen == "FACS" & input$labels == "citations")
+        {plot_ly(data, 
+                 x=~Amino_Acid_Position_simple, 
+                 y=~zscore_FACS,
+                 color=~Consequence,
+                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 size = 2,
+                 alpha = 0.8,
+                 hoverinfo="text", 
+                 text = ~paste(Amino_Acid_Position, Citation)
         ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
         } 
     })
