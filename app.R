@@ -10,8 +10,8 @@ library(digest)
 library(plotly)
 
 data <- as_tibble(read.csv(file = "input.csv", header = TRUE)) %>%
-    select(!(c(X, X.1))) %>%
-    filter(is.na(zscore_proliferation) == FALSE)
+    filter(is.na(zscore_proliferation) == FALSE) %>%
+    select(!X)
 
 pos <- position_jitter(seed = 2, width = 0.2, height = 0.2)
 
@@ -30,7 +30,7 @@ ui <- fluidPage(
     titlePanel("BE-view"),
     #description
     em("Interact with data from base editing mutagenesis screens to understand the functional consequence of variants in the IFNg signalling pathway.", 
-         p("Proliferation (cell death) and FACS-based (MHC-I and PDL-1 expression) screening assays in HT-29 colorectal cancer cells.",
+         p("Proliferation (cell death) and FACS-based (MHC-I and PDL-1 expression) screening assays in HT-29 colorectal cancer cells and CRC-9 tumour organoids.",
            p("CBE: cytidine base editor (C>T), ABE: adenine base editor (A>G)",
            )
          )
@@ -44,38 +44,50 @@ ui <- fluidPage(
     # Sidebar with input 
     sidebarLayout(
         sidebarPanel(
-        selectInput("editor",
-                        "editor", c("BE3-NGG (IFNG pathway)", "BE3-NGG (JAK1)", "BE4max-YE1-NGN (JAK1)", "BE3.9max-NGN (JAK1)", "ABE8e-NGN (JAK1)")),
-        # Only show gene panel if the pathway screen selected
-        conditionalPanel(
-            condition = "input.editor == 'BE3-NGG (IFNG pathway)'",
-            selectInput("gene",
-                        "gene", c("JAK1", "STAT1", "IFNGR1", "IFNGR2", "SOCS1", "IRF1", "B2M", "JAK2")),
+            selectInput("cell_model",
+                        "cancer cell model", c("HT-29", "CRC-9_organoid")),
+            # Only show editor panel if HT-29 is selected
+            conditionalPanel(
+                condition = "input.cell_model == 'HT-29'",
+                selectInput("editor",
+                            "editor", c("BE3-NGG (IFNG pathway)", "BE3-NGG (JAK1)", "BE4max-YE1-NGN (JAK1)", "BE3.9max-NGN (JAK1)", "ABE8e-NGN (JAK1)")),
             ),
-        # Only show screen panel if the available editor screens are selected
-        conditionalPanel(
-            condition = "input.editor == 'BE3-NGG (IFNG pathway)'| input.editor == 'BE3-NGG (JAK1)'",
-            selectInput("screen",
-                         "screen", c("proliferation", "FACS")),
+            conditionalPanel(
+                condition = "input.cell_model == 'CRC-9_organoid'",
+                selectInput("editor",
+                            "editor", c("BE3-NGG (IFNG pathway)")),
+            ),
+            # Only show gene panel if the pathway screen selected
+            conditionalPanel(
+                condition = "input.editor == 'BE3-NGG (IFNG pathway)'",
+                selectInput("gene",
+                            "gene", c("JAK1", "STAT1", "IFNGR1", "IFNGR2", "SOCS1", "IRF1", "B2M", "JAK2")),
+            ),
+            # Only show screen panel if the available editor screens are selected
+            conditionalPanel(
+                condition = "input.editor == 'BE3-NGG (IFNG pathway)' & input.cell_model == 'HT-29' | input.editor == 'BE3-NGG (JAK1)' & input.cell_model == 'HT-29'",
+                selectInput("screen",
+                            "screen", c("proliferation", "FACS")),
+            ),
+            # Only show gene panel if the pathway screen selected
+            conditionalPanel(
+                condition = "input.editor == 'BE3-NGG (JAK1)' | input.editor == 'BE4max-YE1-NGN (JAK1)' | input.editor == 'BE3.9max-NGN (JAK1)' | input.editor == 'ABE8e-NGN (JAK1)'",
+                selectInput("gene",
+                            "gene", c("JAK1")),
+            ),
+            # Only show screen panel if the available editor screens are selected
+            conditionalPanel(
+                condition = "input.editor == 'BE4max-YE1-NGN (JAK1)' | input.editor == 'BE3.9max-NGN (JAK1)' | input.editor == 'ABE8e-NGN (JAK1)' | input.cell_model == 'CRC-9_organoid'",
+                selectInput("screen",
+                            "screen", c("proliferation")),
+            ),
+            selectInput("labels",
+                        "labels", c("predicted amino acid change", "PTMs", "associated phenotypes", "citations")),
+            hr(),
+            downloadButton("downloadData", "download results"),
+            width = 9,
         ),
-        # Only show gene panel if the pathway screen selected
-        conditionalPanel(
-            condition = "input.editor == 'BE3-NGG (JAK1)' | input.editor == 'BE4max-YE1-NGN (JAK1)' | input.editor == 'BE3.9max-NGN (JAK1)' | input.editor == 'ABE8e-NGN (JAK1)'",
-            selectInput("gene",
-                        "gene", c("JAK1")),
-        ),
-        # Only show screen panel if the available editor screens are selected
-        conditionalPanel(
-            condition = "input.editor == 'BE4max-YE1-NGN (JAK1)' | input.editor == 'BE3.9max-NGN (JAK1)' | input.editor == 'ABE8e-NGN (JAK1)'",
-            selectInput("screen",
-                        "screen", c("proliferation")),
-        ),
-        selectInput("labels",
-                    "labels", c("predicted amino acid change", "PTMs", "associated phenotypes", "citations")),
-        hr(),
-        downloadButton("downloadData", "download results"),
-        width = 9,
-        ),
+        
         
         #MAIN
         mainPanel(
@@ -122,18 +134,20 @@ ui <- fluidPage(
 server <- function(input, output) {
     
     text <- reactive({
-        write <- paste0(input$gene, ", ", input$screen, ", ",input$editor)
+        write <- paste0(input$cell_model, ", ",input$gene, ", ", input$screen, ", ",input$editor)
     })
     
     results <- reactive({
                 data <- data %>% 
+                    filter(cell_model == input$cell_model) %>%
                     filter(editor == input$editor) %>%
                     filter(Gene == input$gene) %>%
-                    select(!c(guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG))
+                    select(!c(guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model, validation))
     })
 
     results_download <- reactive({
         data <- data %>% 
+            filter(cell_model == input$cell_model) %>%
             filter(editor == input$editor) %>%
             filter(Gene == input$gene) %>%
             select(!c(Amino_Acid_Position_simple))
@@ -152,6 +166,7 @@ server <- function(input, output) {
     #plot
     output$plot <-renderPlotly({
         data <- data %>%
+            filter(cell_model == input$cell_model) %>%
             filter(editor == input$editor) %>%
             filter(Gene == input$gene)
             
@@ -160,7 +175,7 @@ server <- function(input, output) {
                     x=~Amino_Acid_Position_simple, 
                     y=~zscore_proliferation,
                     color=~Consequence,
-                    colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                    colors = c("Set1"),
                     size = 2,
                     alpha = 0.8,
                     hoverinfo="text", 
@@ -173,7 +188,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_proliferation,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -186,7 +201,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_proliferation,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -199,7 +214,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_proliferation,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -212,7 +227,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_FACS,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -225,7 +240,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_FACS,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -238,7 +253,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_FACS,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
@@ -251,7 +266,7 @@ server <- function(input, output) {
                  x=~Amino_Acid_Position_simple, 
                  y=~zscore_FACS,
                  color=~Consequence,
-                 colors = c("black", "#fabd2f", "#cc241d", "blue"),
+                 colors = c("Set1"),
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
