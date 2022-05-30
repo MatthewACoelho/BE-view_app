@@ -12,6 +12,7 @@ library(plotly)
 data <- as_tibble(read.csv(file = "input.csv", header = TRUE)) %>%
     filter(is.na(zscore_proliferation) == FALSE) %>%
     select(!X)
+data <- rename(data, Predicted_Amino_Acid_Change = Amino_Acid_Change)
 
 pos <- position_jitter(seed = 2, width = 0.2, height = 0.2)
 
@@ -142,7 +143,7 @@ server <- function(input, output) {
                     filter(cell_model == input$cell_model) %>%
                     filter(editor == input$editor) %>%
                     filter(Gene == input$gene) %>%
-                    select(!c(guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model, validation))
+                    select(!c(guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model))
     })
 
     results_download <- reactive({
@@ -179,7 +180,7 @@ server <- function(input, output) {
                     size = 2,
                     alpha = 0.8,
                     hoverinfo="text", 
-                    text = ~paste(Amino_Acid_Change)
+                    text = ~paste(Predicted_Amino_Acid_Change)
             ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
         } 
         
@@ -231,7 +232,7 @@ server <- function(input, output) {
                  size = 2,
                  alpha = 0.8,
                  hoverinfo="text", 
-                 text = ~paste(Amino_Acid_Change)
+                 text = ~paste(Predicted_Amino_Acid_Change)
         ) %>% layout(xaxis=list(title = "amino acid position"), yaxis = list(title = "z-score"), legend = list(title = list(text = "consequence")))
         } 
         
