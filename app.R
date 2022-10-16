@@ -107,9 +107,9 @@ ui <- fluidPage(
             #footnotes
             br(),
             hr(),
+            h6("guide: gRNA sequence (please download data for gRNAs, and for predicted edit information)"),
             h6("PTMs: post-translational modifications"),
             h6("gRNA off target summary: number of GRCh38 genomic positions with 0, 1, 2, 3, or 4 mismatches (please download data for this information)"),
-            h6("guide: gRNA sequence (please download data for this information)"),
             
             #MIT license etc with footnotes
             hr(),
@@ -143,7 +143,7 @@ server <- function(input, output) {
                     filter(cell_model == input$cell_model) %>%
                     filter(editor == input$editor) %>%
                     filter(Gene == input$gene) %>%
-                    select(!c(guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model))
+                    select(!c(predicted_edit, guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model))
     })
 
     results_download <- reactive({
