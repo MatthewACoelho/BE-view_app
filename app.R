@@ -114,7 +114,7 @@ ui <- fluidPage(
             #MIT license etc with footnotes
             hr(),
             #h5("please cite: X..."),
-            a("publication", href = " "),
+            a("publication", href = "https://doi.org/10.1016/j.ccell.2022.12.009"),
             br(),
             a("Matt Coelho's GitHub", href = "https://github.com/MatthewACoelho/"),
             br(),
@@ -143,7 +143,7 @@ server <- function(input, output) {
                     filter(cell_model == input$cell_model) %>%
                     filter(editor == input$editor) %>%
                     filter(Gene == input$gene) %>%
-                    select(!c(predicted_edit, guide, Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model))
+                    select(!c(Amino_Acid_Position_simple, sgRNA_ID, off_target_summary_NGN, off_target_summary_NGG, cell_model))
     })
 
     results_download <- reactive({
